@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>扫大肥鱼 · 干饭闯关</title>
+<style>
+:root{
+  --sea1:#cdeeff; --sea2:#86c8f0; --ink:#1f2f57; --rice:#fffaf0; --rice2:#f3ead6;
+  --lid1:#eef7ff; --lid2:#bcd9f2; --red:#d9573b; --gold:#f2b531; --navy:#2b3a8c;
+  --cell:40px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+body{background:radial-gradient(circle at 15% 10%,#f0fbff 0,transparent 45%),linear-gradient(180deg,var(--sea1),var(--sea2));user-select:none}
+.bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.bubbles i{position:absolute;bottom:-30px;border-radius:50%;border:2px solid rgba(255,255,255,.7);animation:rise linear infinite}
+@keyframes rise{to{transform:translateY(-110vh) translateX(30px)}}
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;padding:10px 10px 8px;gap:8px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+h1{margin:0;font-size:24px;letter-spacing:2px;text-shadow:0 2px 0 #fff;white-space:nowrap}
+.meals{display:flex;gap:4px}
+.meals span{font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.6);opacity:.75;cursor:pointer;transition:.15s}
+.meals span:hover{opacity:1;transform:translateY(-1px)}
+.meals span.buffet{background:linear-gradient(90deg,#ffe08a,#ffb36b);opacity:1;color:#7a3b00}
+.meals span.buffet.cur{background:linear-gradient(90deg,#ff7a45,#d9573b);color:#fff}
+#advWrap{position:absolute;left:10px;right:10px;top:-14px;height:8px;border-radius:99px;background:rgba(255,255,255,.6);overflow:hidden;display:none}
+#advWrap i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ffb36b,#d9573b);width:0}
+body.buffet #advWrap{display:block}
+#board.buffet{background:linear-gradient(#b0562e,#8a3f1f);box-shadow:0 8px 0 #5f2a12,0 14px 30px rgba(0,0,0,.25)}
+#board.slide .c{animation:slide .22s ease-out}
+@keyframes slide{from{transform:translateY(calc(-1 * var(--cell) - 3px))}}
+.c.gone{opacity:.25}
+#plate{display:none}
+body.buffet #plate{display:flex}
+body.buffet #leftPill{display:none}
+#advBtn{display:none}
+body.buffet #advBtn{display:inline-block;background:linear-gradient(#ffd6a8,#ff9f5a)}
+.meals span.cur{background:var(--navy);color:#fff;opacity:1}
+.meals span.done{background:#fff;opacity:1}
+.meals span.done::after{content:" ✓"}
+.meals span.boss.cur{background:var(--red)}
+.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.pill{background:rgba(255,255,255,.88);border-radius:999px;padding:5px 12px;font-weight:700;font-size:15px;box-shadow:0 2px 0 rgba(31,47,87,.15);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pill img{width:22px;height:22px;border-radius:50%}
+.lives span{font-size:17px;transition:.3s}
+.lives span.lost{filter:grayscale(1);opacity:.3}
+.hunger{width:170px;padding:5px 10px}
+.hunger .bar{flex:1;height:12px;border-radius:99px;background:#e3e9f3;overflow:hidden;position:relative}
+.hunger .bar i{position:absolute;inset:0;width:100%;background:linear-gradient(90deg,#ffb84d,#ffd36e);border-radius:99px;transition:width .25s linear}
+.hunger.low .bar i{background:linear-gradient(90deg,#e04a3a,#ff8a5c);animation:blink .5s infinite alternate}
+@keyframes blink{to{opacity:.45}}
+button{font:inherit;border:0;cursor:pointer;border-radius:999px;padding:7px 14px;font-weight:700;background:#fff;color:var(--ink);box-shadow:0 3px 0 rgba(31,47,87,.25)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(31,47,87,.25)}
+button.on{background:var(--navy);color:#fff}
+button.item{background:linear-gradient(#fff3b8,#f6c64a)}
+button.item.on{background:var(--navy);color:#fff}
+button:disabled{opacity:.35;cursor:default}
+.stage{position:relative;display:flex;align-items:flex-end;gap:14px}
+.fishbox{position:relative;width:170px;flex:none;display:flex;flex-direction:column;align-items:center}
+#fish{width:100%;transform-origin:50% 100%;transition:transform .35s cubic-bezier(.3,1.5,.5,1);filter:drop-shadow(0 6px 6px rgba(31,47,87,.25))}
+#fish.chomp{animation:chomp .22s}
+@keyframes chomp{50%{transform:var(--fat) scale(1.06,.94)}}
+#fish.sad{animation:sad .6s}
+@keyframes sad{25%{transform:var(--fat) translateX(-6px) rotate(-5deg)}75%{transform:var(--fat) translateX(6px) rotate(5deg)}}
+.weight{font-size:12px;font-weight:700;background:rgba(255,255,255,.8);border-radius:99px;padding:2px 10px;margin-top:4px}
+.say{position:absolute;left:4px;top:-34px;width:170px;background:#fff;border-radius:14px;padding:6px 10px;font-size:13px;font-weight:700;box-shadow:0 3px 0 rgba(31,47,87,.18);opacity:0;transition:opacity .2s;text-align:center}
+.say.show{opacity:1}
+#board{display:grid;gap:3px;padding:10px;border-radius:18px;background:linear-gradient(#8a5a35,#6d4426);box-shadow:0 8px 0 #4f2f19,0 14px 30px rgba(0,0,0,.25);touch-action:manipulation;position:relative}
+#board.boss{background:linear-gradient(#5b3a6e,#3c2450);box-shadow:0 8px 0 #2a1838,0 14px 30px rgba(0,0,0,.3)}
+.c{width:var(--cell);height:var(--cell);border-radius:50%;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:calc(var(--cell)*.5)}
+.c.h{background:radial-gradient(circle at 35% 30%,#fff 0 18%,var(--lid1) 30%,var(--lid2) 80%,#8fb9de 100%);box-shadow:inset 0 -3px 0 rgba(60,100,150,.35),0 2px 0 rgba(0,0,0,.25)}
+.c.h::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;top:37%;left:37%;background:radial-gradient(circle at 40% 35%,#fff,#9cc0e6);box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.c.h:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.c.o{background:radial-gradient(circle at 50% 45%,var(--rice) 0 55%,var(--rice2) 70%,#d8c9a8 100%);box-shadow:inset 0 2px 3px rgba(0,0,0,.18);cursor:default}
+.c.o.pop{animation:pop .28s ease-out backwards}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+.n1{color:#2f7fd0}.n2{color:#2b9b5a}.n3{color:#d9573b}.n4{color:#6b3fb8}.n5{color:#a3361f}.n6{color:#138a8a}.n7{color:#222}.n8{color:#777}
+.c.flag::before{content:"封";position:absolute;inset:16%;border-radius:4px;background:#fff6dc;border:2px solid var(--red);color:var(--red);font-size:calc(var(--cell)*.36);display:flex;align-items:center;justify-content:center;z-index:2;transform:rotate(-8deg)}
+.c.claude{background:#fff url(assets/claude_face.png) center/cover;box-shadow:0 0 0 3px var(--red);cursor:default}
+.c.claude.boom{animation:boom .5s}
+@keyframes boom{0%{transform:scale(1.7)}100%{transform:scale(1)}}
+.c.sealed{background:#fff url(assets/claude_face.png) center/cover;box-shadow:0 0 0 3px var(--gold);filter:saturate(.55) brightness(1.05)}
+.c.sealed::after{content:"zz";position:absolute;right:-2px;top:-6px;font-size:calc(var(--cell)*.32);color:var(--navy)}
+.c.wrong::after{content:"✕";color:var(--red);font-size:calc(var(--cell)*.7);position:absolute}
+.c.gold{background:radial-gradient(circle,#fff6c9 0 40%,#ffd75e 70%,#e0a21b 100%)}
+.c.gold::before{content:"🍙";font-size:calc(var(--cell)*.55)}
+.c.aim{outline:3px dashed var(--navy);outline-offset:1px}
+.c.fresh{animation:fresh .8s}
+@keyframes fresh{0%,100%{box-shadow:0 0 0 0 var(--red)}50%{box-shadow:0 0 0 6px rgba(217,87,59,.6)}}
+.items{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.float{position:fixed;pointer-events:none;font-weight:900;color:#fff;text-shadow:0 2px 0 var(--ink),0 0 6px var(--ink);font-size:20px;animation:float .9s ease-out forwards;z-index:20;white-space:nowrap}
+@keyframes float{to{transform:translateY(-50px);opacity:0}}
+.combo{position:fixed;left:50%;top:20%;transform:translateX(-50%);font-size:44px;font-weight:900;color:#fff;text-shadow:0 4px 0 var(--ink);pointer-events:none;z-index:25;animation:combo 1s ease-out forwards;white-space:nowrap}
+@keyframes combo{0%{transform:translateX(-50%) scale(.4)}25%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) translateY(-30px);opacity:0}}
+/* stamp */
+#stamp{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:30;background:rgba(31,47,87,.35)}
+#stamp.show{display:flex}
+#stamp .box{position:relative;display:flex;align-items:flex-end}
+#stamp img{height:min(55vh,420px);animation:slidein .35s ease-out}
+@keyframes slidein{from{transform:translateX(80px);opacity:0}}
+#stamp .mark{position:absolute;left:-40%;top:28%;border:8px solid var(--red);color:var(--red);font-size:min(10vw,64px);font-weight:900;padding:6px 18px;border-radius:12px;transform:rotate(-14deg) scale(3);opacity:0;background:rgba(255,255,255,.8);white-space:nowrap;animation:stampin .35s .25s cubic-bezier(.3,1.6,.5,1) forwards;letter-spacing:4px}
+@keyframes stampin{to{transform:rotate(-14deg) scale(1);opacity:1}}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translate(-8px,4px)}40%{transform:translate(7px,-5px)}60%{transform:translate(-5px,-3px)}80%{transform:translate(4px,5px)}}
+/* panels */
+.panel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:40;background:rgba(31,47,87,.5);padding:12px}
+.panel.show{display:flex}
+.card{background:#fff;border-radius:22px;padding:20px 24px;text-align:center;max-width:560px;width:100%;box-shadow:0 10px 0 rgba(0,0,0,.15);animation:pop .35s}
+.card h2{margin:4px 0;font-size:28px}
+.card p{margin:6px 0;font-size:15px}
+.card .big{font-size:40px;font-weight:900;color:var(--red)}
+.card .hero{height:170px}
+.picks{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0 4px}
+.pick{width:150px;border-radius:16px;padding:12px 10px;background:linear-gradient(#fffaf0,#fde9b8);box-shadow:0 4px 0 #e2b65a;cursor:pointer;transition:transform .15s}
+.pick:hover{transform:translateY(-4px) rotate(-1deg)}
+.pick .ic{font-size:36px}
+.pick b{display:block;margin:4px 0;font-size:16px}
+.pick small{font-size:12px;opacity:.8;line-height:1.4;display:block}
+.banner{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:35;background:var(--navy);color:#fff;padding:14px 30px;border-radius:18px;font-size:30px;font-weight:900;box-shadow:0 6px 0 rgba(0,0,0,.25);animation:banner 1.6s ease-in-out forwards;pointer-events:none;text-align:center;white-space:nowrap}
+.banner small{display:block;font-size:14px;font-weight:700;opacity:.8}
+.banner.boss{background:var(--red)}
+@keyframes banner{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.08);opacity:1}25%,80%{transform:translate(-50%,-50%) scale(1)}100%{opacity:0}}
+.tip{font-size:12px;opacity:.75;text-align:center;max-width:600px}
+#peek{position:fixed;right:-14px;bottom:-34px;height:190px;z-index:2;pointer-events:none;transition:transform .4s}
+#peek.alert{transform:translateY(-30px) rotate(-6deg)}
+@media (max-width:760px){.fishbox{width:96px}.say{width:120px;font-size:12px;top:-40px}h1{font-size:20px}#peek{height:110px}.hunger{width:140px}.stage{gap:6px}}
+</style>
+</head>
+<body>
+<div class="bubbles" id="bubbles"></div>
+<div id="app">
+  <div class="top">
+    <h1>扫大肥鱼</h1>
+    <div class="meals" id="meals"></div>
+  </div>
+  <div class="hud">
+    <div class="pill" title="吃到的米">🍚 <b id="rice">0</b></div>
+    <div class="pill lives" id="lives" title="饭票（命）"></div>
+    <div class="pill hunger" id="hunger" title="饥饿值：一直在掉，吃米补回来">😋<div class="bar"><i id="hungerBar"></i></div></div>
+    <div class="pill" id="leftPill" title="本顿剩余 Claude"><img src="assets/claude_face.png" alt=""><b id="left">0</b></div>
+    <div class="pill" id="plate" title="已经转过去的盘数">♾ 第 <b id="plateN">0</b> 盘</div>
+  </div>
+  <div class="stage">
+    <div class="fishbox">
+      <div class="say" id="say">饿了…先开一碗！</div>
+      <img id="fish" src="assets/fish_eat.png" alt="大肥鱼">
+      <div class="weight" id="weight">体重 50.0 斤</div>
+    </div>
+    <div style="position:relative"><div id="advWrap"><i id="advBar"></i></div><div id="board"></div></div>
+  </div>
+  <div class="items">
+    <button id="advBtn" title="立刻上下一盘，奖励分数">⏩ 快上菜</button>
+    <button id="flagMode" title="手机上切换：点击=贴封条">封条模式</button>
+    <button class="item" id="itSniff" title="点一个碗：是 Claude 就安全封印">👃 嗅一嗅 ×<span>0</span></button>
+    <button class="item" id="itChop" title="点一个碗：安全翻开 3×3">🥢 透视筷子 ×<span>0</span></button>
+    <button id="mute">🔊</button>
+    <button id="restart">重开</button>
+  </div>
+  <div class="tip">左键开碗吃米 · 右键/长按贴封条 · 数字=周围几个 Claude · 点数字快速开 · 饥饿条见底会掉饭票 · 每顿饭后三选一道具</div>
+</div>
+<img id="peek" src="assets/claude_chibi.png" alt="">
+<div id="stamp"><div class="box"><div class="mark" id="stampText">禁止干饭</div><img src="assets/claude_chibi.png" alt=""></div></div>
+<div class="panel" id="panel"><div class="card" id="panelCard"></div></div>
+
+<script>
+(() => {
+// ---------------- config ----------------
+const MEALS = [
+  {name:'早饭',  w:8,  h:8,  claude:7,  gold:1, drain:1.6},
+  {name:'午饭',  w:9,  h:9,  claude:11, gold:2, drain:1.9},
+  {name:'下午茶',w:10, h:10, claude:15, gold:2, drain:2.2},
+  {name:'晚饭',  w:11, h:11, claude:20, gold:3, drain:2.5},
+  {name:'夜宵',  w:12, h:12, claude:24, gold:3, drain:2.8, boss:true},
+];
+// 无限自助：回转饭桌。桌子不停往下转，新的一排从上面进来，最底下一排转走。
+// 没吃的米转走 = 浪费（扣饥饿值），封对的 Claude 转走 = 奖励；越转越快、Claude 越来越密。
+const BUFFET = {name:'无限自助', w:10, h:11, drain:2.0, buffet:true};
+const cfg = () => R.mode==='buffet' ? BUFFET : MEALS[R.meal];
+const buffetPeriod = () => Math.max(2.2, 7 - S.plates*0.12);           // 秒/盘
+const buffetDensity = () => Math.min(0.26, 0.12 + S.plates*0.0035);     // Claude 密度
+const CARDS = {
+  chop:  {ic:'🥢', name:'透视筷子 ×2', desc:'点一个碗，安全翻开周围 3×3', apply:R=>R.chop+=2},
+  sniff: {ic:'👃', name:'嗅一嗅 ×2',   desc:'点一个碗，是 Claude 就封印她，不扣饭票', apply:R=>R.sniff+=2},
+  ticket:{ic:'🎫', name:'饭票 +1',     desc:'多一条命（最多 5 张）', apply:R=>{R.maxLives=Math.min(5,R.maxLives+1);R.lives=Math.min(R.maxLives,R.lives+1);}},
+  sleepy:{ic:'💤', name:'Claude 打瞌睡',desc:'下一顿开局就有 3 个 Claude 睡着被封印', apply:R=>R.sleepy+=3},
+  glutton:{ic:'🍜',name:'大胃王',      desc:'之后吃的米 ×1.5（可叠加）', apply:R=>R.mult+=.5},
+  slow:  {ic:'🐢', name:'细嚼慢咽',    desc:'饥饿值掉得慢 30%', apply:R=>R.drainMul*=.7},
+  bento: {ic:'🍱', name:'保温饭盒',    desc:'下次饿晕时不掉饭票', apply:R=>R.bento++},
+};
+const qs = new URLSearchParams(location.search);
+let seed = qs.has('seed') ? +qs.get('seed') : (Math.random()*1e9|0);
+function rng(){ seed = (seed*1664525 + 1013904223) >>> 0; return seed/4294967296; }
+const $ = id => document.getElementById(id);
+const boardEl = $('board');
+let R, S;   // R = run state, S = current meal
+
+// ---------------- audio ----------------
+let ac=null, muted=qs.has('mute'), master, bgmStep=0;
+function audio(){ if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); master=ac.createGain(); master.gain.value=muted?0:.5; master.connect(ac.destination); setInterval(bgmTick,125); } if(ac.state==='suspended') ac.resume(); }
+function tone(f,d=.1,type='square',v=.15,t0=0,slide=0){ if(!ac) return; const t=ac.currentTime+t0,o=ac.createOscillator(),g=ac.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f*slide),t+d); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.001,t+d); o.connect(g); g.connect(master); o.start(t); o.stop(t+d+.02); }
+function noise(d=.08,v=.2,t0=0,hp=1500){ if(!ac) return; const t=ac.currentTime+t0,len=ac.sampleRate*d|0,b=ac.createBuffer(1,len,ac.sampleRate),a=b.getChannelData(0); for(let i=0;i<len;i++) a[i]=(Math.random()*2-1)*(1-i/len); const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain(); f.type='highpass'; f.frequency.value=hp; s.buffer=b; g.gain.value=v; s.connect(f); f.connect(g); g.connect(master); s.start(t); }
+const SFX={
+  open(n){ for(let i=0;i<Math.min(n,14);i++) tone(520+i*70,.07,'triangle',.11,i*.03); noise(.05,.1,0,3000); },
+  chomp(){ noise(.06,.22,0,800); noise(.06,.18,.09,900); },
+  flag(){ tone(300,.08,'square',.09); tone(450,.08,'square',.07,.05); },
+  stamp(){ tone(140,.35,'sawtooth',.3,0,.4); noise(.25,.45,0,200); tone(90,.4,'sine',.4,.02,.5); },
+  gold(){ [660,880,1320].forEach((f,i)=>tone(f,.12,'triangle',.15,i*.07)); },
+  item(){ [400,500,400,700].forEach((f,i)=>tone(f,.06,'sine',.16,i*.05)); },
+  boss(){ [220,207,196,185].forEach((f,i)=>tone(f,.18,'sawtooth',.12,i*.12)); },
+  win(){ [523,659,784,1047,784,1047].forEach((f,i)=>tone(f,.16,'square',.11,i*.11)); },
+  lose(){ [392,330,262,196].forEach((f,i)=>tone(f,.25,'triangle',.18,i*.18)); },
+  hungry(){ tone(180,.3,'triangle',.2,0,.6); },
+};
+function bgmTick(){
+  if(!ac||document.hidden||!R) return;
+  const s=bgmStep%16, boss=S&&cfg().boss, low=S&&S.hunger<30;
+  const bass=boss?[98,98,92,87]:[110,110,147,131];
+  const mel=boss?[392,0,370,0,349,0,330,0,392,0,440,0,466,440,392,0]:[440,0,523,0,587,523,440,0,392,0,440,0,523,587,659,0];
+  if(s%4===0){ tone(bass[(bgmStep>>4)%4],.22,'triangle',.17); noise(.03,.06,0,6000); }
+  if(s%4===2) noise(.02,low?.09:.04,0,8000);
+  if(low && s%2===1) noise(.015,.05,0,9000);
+  if(mel[s]) tone(mel[s]*((bgmStep>>6)%2?1.122:1),.12,'square',.032);
+  bgmStep++;
+}
+$('mute').onclick=()=>{ muted=!muted; $('mute').textContent=muted?'🔇':'🔊'; if(master) master.gain.value=muted?0:.5; };
+
+// ---------------- fish ----------------
+const LINES={
+  start:['饿了…先开一碗！','米！我闻到米了！','今天要吃十碗'],
+  eat:['嗷呜～','好吃！','再来一碗','米米米米','吧唧吧唧'],
+  big:['干饭连击！！','一口气吃光！','这就是 DeepEat'],
+  hit:['呜…被盖章了','Claude 你不讲武德','我只是想吃口饭…'],
+  gold:['金饭团！拿到道具','金饭团！好运来'],
+  sealed:['封印成功，嘿嘿','抓到你了 Claude','睡吧睡吧'],
+  hungry:['好饿…要饿晕了','快！快开碗！'],
+  boss:['大小姐又放人了！','要快点吃完！'],
+};
+let sayT, faceT;
+function say(k){ const a=LINES[k]; $('say').textContent=a[Math.random()*a.length|0]; $('say').classList.add('show'); clearTimeout(sayT); sayT=setTimeout(()=>$('say').classList.remove('show'),1500); }
+function face(name, ms=900){ $('fish').src='assets/fish_'+name+'.png'; clearTimeout(faceT); if(ms) faceT=setTimeout(()=>{ $('fish').src='assets/fish_'+(S&&S.hunger<30?'shock':'eat')+'.png'; },ms); }
+function fishAnim(c){ const f=$('fish'); f.classList.remove('chomp','sad'); void f.offsetWidth; f.classList.add(c); }
+function updateFat(){ // gentle growth: never balloon
+  const k=Math.min(1, R.totalRice/350); const sx=1+k*.14, sy=1-k*.03;
+  $('fish').style.setProperty('--fat',`scale(${sx},${sy})`); $('fish').style.transform=`scale(${sx},${sy})`;
+  $('weight').textContent=`体重 ${(50+R.totalRice*0.08).toFixed(1)} 斤`;
+}
+
+// ---------------- run / meal ----------------
+function newRun(m=0, mode='run'){
+  R={mode, meal:m, lives:3, maxLives:3, totalRice:0, score:0, mult:1, drainMul:1, sniff:0, chop:0, sleepy:0, bento:0, picked:[], t0:performance.now(), over:false};
+  document.body.classList.toggle('buffet', mode==='buffet');
+  $('panel').classList.remove('show'); updateFat();
+  if(mode==='buffet') startBuffet(); else startMeal(m);
+}
+function startMeal(m){
+  R.meal=m; const M=MEALS[m];
+  S={w:M.w,h:M.h,nC:M.claude,nG:M.gold,cells:[],started:false,over:false,hunger:100,flagMode:false,aim:null,bossTick:0,bossAdds:0,paused:true,rice:0};
+  for(let i=0;i<M.w*M.h;i++) S.cells.push({c:false,g:false,o:false,f:false,n:0,sealed:false});
+  boardEl.classList.toggle('boss',!!M.boss); boardEl.classList.remove('buffet');
+  $('flagMode').classList.remove('on');
+  fitCell(); render(true); hud(); mealsBar();
+  face('eat',0); say('start');
+  banner(M.boss?'夜宵 · Boss':M.name, M.boss?'Claude 大小姐会往没开的地方继续放 Claude！':`${M.w}×${M.h} · ${M.claude} 个 Claude`, M.boss);
+  if(M.boss){ $('peek').classList.add('alert'); }
+  setTimeout(()=>{ if(S) S.paused=false; },900);
+}
+function mealsBar(){
+  const b=R.mode==='buffet';
+  $('meals').innerHTML=MEALS.map((M,i)=>`<span data-m="${i}" title="点击直接玩这一顿" class="${!b&&i<R.meal?'done':!b&&i===R.meal?'cur':''} ${M.boss?'boss':''}">${M.name}</span>`).join('')
+    + `<span data-m="buffet" class="buffet ${b?'cur':''}" title="无限挑战：桌子会一直转">♾ 无限自助</span>`;
+  $('meals').querySelectorAll('span').forEach(s=>s.onclick=()=>{ audio(); const m=s.dataset.m; m==='buffet'?newRun(0,'buffet'):newRun(+m); });
+}
+function banner(t,sub,boss){ const b=document.createElement('div'); b.className='banner'+(boss?' boss':''); b.innerHTML=`${t}<small>${sub}</small>`; document.body.appendChild(b); setTimeout(()=>b.remove(),1600); }
+function fitCell(){
+  const wide=window.innerWidth>760, maxW=Math.min(window.innerWidth-(wide?200:110),760), maxH=window.innerHeight-(wide?210:240);
+  const c=Math.floor(Math.min((maxW-20)/S.w,(maxH-20)/S.h,50))-3;
+  document.documentElement.style.setProperty('--cell',Math.max(20,c)+'px');
+}
+const nb=i=>{ const x=i%S.w,y=i/S.w|0,r=[]; for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ if(!dx&&!dy) continue; const X=x+dx,Y=y+dy; if(X>=0&&Y>=0&&X<S.w&&Y<S.h) r.push(Y*S.w+X);} return r; };
+const recount=()=>S.cells.forEach((c,i)=>c.n=nb(i).filter(j=>S.cells[j].c).length);
+function place(first){
+  const safe=new Set([first,...nb(first)]);
+  const pool=[...S.cells.keys()].filter(i=>!safe.has(i));
+  const take=()=>pool.splice(rng()*pool.length|0,1)[0];
+  const cl=[]; for(let k=0;k<S.nC;k++){ const i=take(); S.cells[i].c=true; cl.push(i); }
+  for(let k=0;k<S.nG;k++) S.cells[take()].g=true;
+  recount(); S.started=true;
+  // 打瞌睡 card: seal some Claudes at start
+  for(let k=0;k<R.sleepy&&cl.length;k++){ const i=cl.splice(rng()*cl.length|0,1)[0]; S.cells[i].o=true; S.cells[i].sealed=true; }
+  R.sleepy=0;
+}
+function gain(n){ const g=Math.round(n*R.mult); S.rice+=g; R.totalRice+=g; R.score+=g*10; S.hunger=Math.min(100,S.hunger+n*3.2+(n>=10?15:0)); updateFat(); return g; }
+function open(i){
+  const c=S.cells[i]; if(S.over||R.over||S.paused||c.o||c.f) return;
+  if(!S.started) place(i);
+  if(c.c){ hitClaude(i); return; }
+  const got=flood([i]);
+  afterOpen(i,got);
+}
+function flood(start){
+  const q=[...start], got=[];
+  while(q.length){ const k=q.pop(), d=S.cells[k]; if(d.o||d.f||d.c) continue; d.o=true; got.push(k);
+    if(d.n===0&&!d.g) nb(k).forEach(j=>{ if(!S.cells[j].o) q.push(j); }); }
+  return got;
+}
+function afterOpen(i,got){
+  if(!got.length){ render(); hud(); return; }
+  let golds=got.filter(k=>S.cells[k].g).length;
+  const g=gain(got.length);
+  SFX.open(got.length); setTimeout(SFX.chomp,80); fishAnim('chomp'); face('eat',0);
+  for(let k=0;k<golds;k++){ const it=rng()<.5?'sniff':'chop'; R[it]++; SFX.gold(); floatAt(i,it==='sniff'?'🍙 → 👃 嗅一嗅':'🍙 → 🥢 透视筷子'); say('gold'); }
+  if(!golds){ if(got.length>=15){ say('big'); combo(got.length); } else if(rng()<.3) say('eat'); floatAt(i,'+'+g+'🍚'); }
+  render(new Set(got)); hud(); bossStep(); checkClear();
+}
+function chord(i){
+  const c=S.cells[i]; if(!c.o||c.c||!c.n||S.over||S.paused) return;
+  const ns=nb(i), marked=ns.filter(j=>S.cells[j].f||(S.cells[j].c&&S.cells[j].o)).length;
+  if(marked!==c.n) return;
+  const hidden=ns.filter(j=>!S.cells[j].o&&!S.cells[j].f);
+  const bad=hidden.find(j=>S.cells[j].c); if(bad!==undefined){ hitClaude(bad); return; }
+  afterOpen(i,flood(hidden));
+}
+function flag(i){ const c=S.cells[i]; if(S.over||S.paused||c.o||!S.started) return; c.f=!c.f; SFX.flag(); render(); hud(); }
+function useItem(i){
+  const c=S.cells[i], kind=S.aim; S.aim=null; R[kind]--; SFX.item();
+  if(!S.started) place(i);
+  if(kind==='sniff'){
+    if(c.c){ c.o=true; c.sealed=true; c.f=false; say('sealed'); floatAt(i,'封印！'); render(); hud(); checkClear(); }
+    else if(!c.o){ floatAt(i,'不是 Claude，放心吃'); c.f=false; afterOpen(i,flood([i])); }
+    return;
+  }
+  // chop: reveal 3x3 safely
+  const area=[i,...nb(i)].filter(j=>!S.cells[j].o);
+  area.forEach(j=>{ const d=S.cells[j]; d.f=false; if(d.c){ d.o=true; d.sealed=true; } });
+  floatAt(i,'🥢 透视！'); afterOpen(i,flood(area.filter(j=>!S.cells[j].c)));
+  render(); hud(); checkClear();
+}
+function stamp(text){
+  $('stampText').textContent=text; SFX.stamp(); fishAnim('sad'); face('cry',1300);
+  $('stamp').classList.add('show'); $('app').classList.add('shake'); S.paused=true;
+  setTimeout(()=>{ $('stamp').classList.remove('show'); $('app').classList.remove('shake'); if(!R.over) S.paused=false; },1100);
+}
+function loseLife(){ R.lives--; hud(); if(R.lives<=0){ R.over=true; setTimeout(()=>endRun(false),1200); } }
+function hitClaude(i){
+  const c=S.cells[i]; c.o=true;
+  const lost=Math.min(S.rice,5); S.rice-=lost; R.totalRice=Math.max(0,R.totalRice-lost); R.score=Math.max(0,R.score-lost*10);
+  stamp('禁止干饭'); say('hit'); if(lost) setTimeout(()=>floatAt(i,'-'+lost+'🍚 被没收'),200);
+  render(null,i); updateFat(); loseLife(); if(!R.over) checkClear();
+}
+function starve(){
+  if(R.bento>0){ R.bento--; S.hunger=60; floatAtFish('🍱 保温饭盒救了你'); SFX.item(); return; }
+  S.hunger=60; SFX.hungry(); stamp('饿晕了'); say('hungry'); loseLife();
+}
+// Boss: every 5 opening actions, Claude 大小姐 drops a new Claude into the FOG (hidden cells with no opened neighbour) — never changes a number you've already seen.
+function bossStep(){
+  if(!cfg().boss||S.over) return;
+  if(++S.bossTick%5) return;
+  if(S.bossAdds>=8) return;
+  const fog=S.cells.map((c,i)=>i).filter(i=>{ const c=S.cells[i]; return !c.o&&!c.c&&!c.f&&!c.g&&nb(i).every(j=>!S.cells[j].o); });
+  if(!fog.length) return;
+  const i=fog[rng()*fog.length|0]; S.cells[i].c=true; S.nC++; S.bossAdds++; recount();
+  SFX.boss(); say('boss'); face('shock',1000);
+  $('peek').style.transform='translateY(-50px) rotate(-10deg)'; setTimeout(()=>$('peek').style.transform='',600);
+  const el=boardEl.children[i]; el.classList.add('fresh'); setTimeout(()=>el.classList.remove('fresh'),800);
+  floatAt(i,'大小姐：再加一个'); hud();
+}
+function checkClear(){
+  if(S.over||R.over||R.mode==='buffet') return;
+  if(S.cells.some(c=>!c.c&&!c.o)) return;
+  S.over=true; S.paused=true; SFX.win(); face('full',0);
+  const bonus=Math.round(S.hunger)*2; R.score+=bonus;
+  $('peek').classList.remove('alert');
+  if(R.meal===MEALS.length-1){ setTimeout(()=>endRun(true),700); return; }
+  setTimeout(()=>showPicks(bonus),700);
+}
+function showPicks(bonus){
+  const keys=Object.keys(CARDS).filter(k=>!(k==='ticket'&&R.maxLives>=5));
+  const pool=[]; while(pool.length<3){ const k=keys[rng()*keys.length|0]; if(!pool.includes(k)) pool.push(k); }
+  const M=MEALS[R.meal];
+  $('panelCard').innerHTML=`<img class="hero" src="assets/fish_full.png"><h2>${M.name}吃完了！</h2><p>这顿吃了 <b>${S.rice}</b> 碗 · 剩余饥饿值奖励 +${bonus}</p><p>选一个饭后道具：</p><div class="picks">${pool.map(k=>`<div class="pick" data-k="${k}"><div class="ic">${CARDS[k].ic}</div><b>${CARDS[k].name}</b><small>${CARDS[k].desc}</small></div>`).join('')}</div>`;
+  $('panel').classList.add('show');
+  document.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ audio(); const k=p.dataset.k; CARDS[k].apply(R); R.picked.push(k); SFX.item(); $('panel').classList.remove('show'); startMeal(R.meal+1); });
+}
+function endRun(win){
+  R.over=true; S.paused=true;
+  S.cells.forEach(c=>{ if(c.c&&!c.o) c.reveal=true; }); render();
+  if(R.mode==='buffet'){
+    SFX.lose(); face('cry',0);
+    const secs=((performance.now()-R.t0)/1000)|0, best=+localStorage.getItem('sdfy_buffet_best')||0, bp=+localStorage.getItem('sdfy_buffet_plates')||0;
+    if(R.score>best) localStorage.setItem('sdfy_buffet_best',R.score); if(S.plates>bp) localStorage.setItem('sdfy_buffet_plates',S.plates);
+    const title=S.plates>=60?'自助餐厅老板哭了':S.plates>=40?'吃垮自助':S.plates>=20?'回本了':'还没回本';
+    $('panelCard').innerHTML=`<img class="hero" src="assets/fish_cry.png"><h2>自助结束 · ${title}</h2><p>转过 <b>${S.plates}</b> 盘 · 吃了 ${R.totalRice} 碗 · 浪费 ${S.waste} 碗 · 封印 ${S.sealedOut} 个 Claude</p><div class="big">${R.score}</div><p>坚持 ${secs}s · 最高分 ${Math.max(best,R.score)} · 最远 ${Math.max(bp,S.plates)} 盘</p><button id="again">再来一轮自助</button>`;
+    setTimeout(()=>{ $('panel').classList.add('show'); $('again').onclick=()=>{ audio(); newRun(0,'buffet'); }; },300);
+    return;
+  }
+  if(win){ R.score+=R.lives*200; SFX.win(); } else { SFX.lose(); face('cry',0); }
+  const secs=((performance.now()-R.t0)/1000)|0;
+  const best=+localStorage.getItem('sdfy_run_best')||0; if(R.score>best) localStorage.setItem('sdfy_run_best',R.score);
+  const grade=!win?'被盖章出局':R.lives>=4?'干饭之神':R.lives>=2?'干饭达人':'险些饿死';
+  const picks=R.picked.map(k=>CARDS[k].ic).join(' ')||'无';
+  $('panelCard').innerHTML = win
+    ? `<img class="hero" src="assets/fish_full.png"><h2>五顿全吃完了！</h2><p><b>${grade}</b> · 体重 ${(50+R.totalRice*0.08).toFixed(1)} 斤</p><div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 剩 ${R.lives} 张饭票 · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><button id="again">再吃一轮</button>`
+    : `<img class="hero" src="assets/fish_cry.png"><h2>饭票用光了</h2><p>倒在了「${MEALS[R.meal].name}」· Claude：今天的米没收了。</p><div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><button id="again">不服，再来</button>`;
+  setTimeout(()=>{ $('panel').classList.add('show'); $('again').onclick=()=>{ audio(); newRun(); }; }, win?600:300);
+}
+// ---------------- 无限自助（回转饭桌） ----------------
+function genRow(){ const d=buffetDensity(); return Array.from({length:S.w},()=>{ const c=rng()<d; return {c, g:!c&&rng()<.02, o:false, f:false, n:0, sealed:false}; }); }
+function recountRow0(){ for(let x=0;x<S.w;x++){ let n=0; for(let dx=-1;dx<=1;dx++){ const X=x+dx; if(X<0||X>=S.w) continue; if(S.buf[X].c) n++; if(dx&&S.cells[X].c) n++; if(S.cells[S.w+X].c) n++; } S.cells[x].n=n; } }
+function startBuffet(){
+  R.meal=-1;
+  S={w:BUFFET.w,h:BUFFET.h,nC:0,nG:0,cells:[],started:true,over:false,hunger:100,flagMode:false,aim:null,paused:true,rice:0,plates:0,adv:0,waste:0,sealedOut:0,buf:null};
+  for(let r=0;r<S.h;r++) S.cells.push(...genRow());
+  for(let r=S.h-3;r<S.h;r++) for(let x=3;x<=6;x++){ const c=S.cells[r*S.w+x]; c.c=false; c.g=false; }
+  S.buf=genRow(); recount(); recountRow0();
+  boardEl.classList.remove('boss'); boardEl.classList.add('buffet');
+  $('flagMode').classList.remove('on'); $('peek').classList.add('alert');
+  fitCell(); render(true); hud(); mealsBar(); face('eat',0); say('start');
+  banner('♾ 无限自助','桌子一直在转：没吃的米转走算浪费，越转越快',true);
+  setTimeout(()=>{ if(R.mode!=='buffet') return; S.paused=false; const i=(S.h-2)*S.w+(S.w/2|0); afterOpen(i,flood([i])); },1300);
+}
+function advance(manual){
+  if(R.mode!=='buffet'||S.over||R.over||S.paused) return;
+  const out=S.cells.slice(-S.w); let waste=0, sealed=0;
+  out.forEach(c=>{ if(c.c&&(c.f||c.sealed)) sealed++; else if(!c.c&&!c.o) waste++; });
+  S.cells=S.buf.concat(S.cells.slice(0,-S.w)); S.buf=genRow(); recountRow0();
+  S.plates++; S.adv=0;
+  if(manual){ const b=20+S.plates*2; R.score+=b; floatAtFish(`⏩ 快上菜 +${b}`); }
+  if(sealed){ S.sealedOut+=sealed; R.score+=sealed*50; setTimeout(()=>floatAtFish(`封印的 Claude 转走 +${sealed*50}`),250); }
+  if(waste){ S.waste+=waste; S.hunger-=waste*3; setTimeout(()=>floatAtFish(`浪费 ${waste} 碗！饥饿 -${waste*3}`),manual?500:0); face('shock',800); }
+  tone(330,.08,'triangle',.12); tone(440,.08,'triangle',.1,.06);
+  boardEl.classList.remove('slide'); void boardEl.offsetWidth; boardEl.classList.add('slide');
+  render(); hud();
+  if(S.plates%10===0) banner(`第 ${S.plates} 盘`,`上菜速度 ${buffetPeriod().toFixed(1)}s/盘 · Claude 更密了`,false);
+  if(S.plates%15===0) setTimeout(showBuffetPick,300);
+}
+function showBuffetPick(){
+  if(R.over) return; S.paused=true;
+  const keys=Object.keys(CARDS).filter(k=>!(k==='ticket'&&R.maxLives>=5));
+  const pool=[]; while(pool.length<3){ const k=keys[rng()*keys.length|0]; if(!pool.includes(k)) pool.push(k); }
+  $('panelCard').innerHTML=`<img class="hero" src="assets/fish_full.png"><h2>转过 ${S.plates} 盘！</h2><p>自助加餐，选一个道具：</p><div class="picks">${pool.map(k=>`<div class="pick" data-k="${k}"><div class="ic">${CARDS[k].ic}</div><b>${CARDS[k].name}</b><small>${k==='sleepy'?'桌上 3 个 Claude 立刻睡着被封印':CARDS[k].desc}</small></div>`).join('')}</div>`;
+  $('panel').classList.add('show');
+  document.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ audio(); const k=p.dataset.k; CARDS[k].apply(R); R.picked.push(k); SFX.item();
+    if(R.sleepy){ const cl=S.cells.map((c,i)=>i).filter(i=>S.cells[i].c&&!S.cells[i].o); for(let n=0;n<R.sleepy&&cl.length;n++){ const i=cl.splice(rng()*cl.length|0,1)[0]; S.cells[i].o=true; S.cells[i].sealed=true; S.cells[i].f=false; } R.sleepy=0; render(); }
+    $('panel').classList.remove('show'); hud(); setTimeout(()=>{ S.paused=false; },400); });
+}
+function hud(){
+  $('rice').textContent=R.totalRice;
+  $('lives').innerHTML=Array.from({length:R.maxLives},(_,k)=>`<span class="${k<R.lives?'':'lost'}">🎫</span>`).join('');
+  const known=S.cells.filter(c=>c.f||(c.c&&c.o)).length; $('left').textContent=S.nC-known;
+  if(R.mode==='buffet') $('plateN').textContent=S.plates;
+  [['itSniff','sniff'],['itChop','chop']].forEach(([id,k])=>{ const b=$(id); b.querySelector('span').textContent=R[k]; b.disabled=!R[k]||S.over||R.over; b.classList.toggle('on',S.aim===k); });
+  boardEl.querySelectorAll('.aim').forEach(e=>e.classList.remove('aim'));
+}
+function render(popSet=null,boomI=-1){
+  if(popSet===true){ boardEl.innerHTML=''; boardEl.style.gridTemplateColumns=`repeat(${S.w},var(--cell))`; S.cells.forEach((_,i)=>{ const d=document.createElement('div'); d.dataset.i=i; boardEl.appendChild(d); }); popSet=null; }
+  const kids=boardEl.children, order=popSet?[...popSet]:null;
+  S.cells.forEach((c,i)=>{
+    const d=kids[i]; let cls='c ';
+    if(c.o){ if(c.sealed) cls+='sealed'; else if(c.c) cls+='claude'+(i===boomI?' boom':''); else if(c.g) cls+='o gold'; else cls+='o n'+c.n; }
+    else if(c.reveal&&!c.f) cls+='sealed';
+    else { cls+='h'; if(c.f) cls+=' flag'; if(R.over&&c.f&&!c.c) cls+=' wrong'; }
+    if(popSet&&popSet.has(i)){ cls+=' pop'; d.style.animationDelay=Math.min(450,order.indexOf(i)*7)+'ms'; }
+    d.className=cls; d.textContent=(c.o&&!c.c&&!c.g&&c.n)?c.n:'';
+  });
+}
+function floatAt(i,txt){ const r=boardEl.children[i].getBoundingClientRect(),f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.left=Math.min(window.innerWidth-200,r.left)+'px'; f.style.top=r.top-10+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),900); }
+function floatAtFish(txt){ const r=$('fish').getBoundingClientRect(),f=document.createElement('div'); f.className='float'; f.textContent=txt; f.style.left=r.left+'px'; f.style.top=r.top+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),900); }
+function combo(n){ const f=document.createElement('div'); f.className='combo'; f.textContent=`干饭连击 ×${n}`; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
+
+// hunger loop
+let last=performance.now();
+setInterval(()=>{
+  const now=performance.now(), dt=(now-last)/1000; last=now;
+  if(!S||!S.started||S.paused||S.over||R.over||document.hidden||qs.has('nohunger')) return;
+  S.hunger-=(cfg().drain+(R.mode==='buffet'?S.plates*0.02:0))*R.drainMul*dt;
+  if(S.hunger<=0) starve();
+  if(R.mode==='buffet'&&!S.paused&&!R.over){ S.adv+=dt; $('advBar').style.width=Math.min(100,S.adv/buffetPeriod()*100)+'%'; if(S.adv>=buffetPeriod()) advance(false); }
+  const low=S.hunger<30; $('hunger').classList.toggle('low',low);
+  $('hungerBar').style.width=Math.max(0,S.hunger)+'%';
+},100);
+
+// ---------------- input ----------------
+let lpT=null, lpFired=false, lastTap={i:-1,t:0};
+boardEl.addEventListener('contextmenu',e=>e.preventDefault());
+boardEl.addEventListener('pointerdown',e=>{
+  const d=e.target.closest('.c'); if(!d) return; audio(); const i=+d.dataset.i;
+  if(e.button===2){ if(S.aim){ S.aim=null; hud(); } else flag(i); return; }
+  lpFired=false; clearTimeout(lpT);
+  if(e.pointerType!=='mouse') lpT=setTimeout(()=>{ lpFired=true; flag(i); navigator.vibrate&&navigator.vibrate(20); },380);
+});
+boardEl.addEventListener('pointerup',e=>{
+  clearTimeout(lpT); const d=e.target.closest('.c'); if(!d||e.button===2||lpFired) return;
+  const i=+d.dataset.i, c=S.cells[i]; if(S.paused||S.over) return;
+  if(S.aim){ if(!c.o) useItem(i); return; }
+  const now=performance.now();
+  if(c.o){ if(e.pointerType==='mouse'||(now-lastTap.t<350&&lastTap.i===i)) chord(i); lastTap={i,t:now}; return; }
+  if(S.flagMode) flag(i); else open(i);
+});
+boardEl.addEventListener('pointerover',e=>{ if(!S.aim) return; const d=e.target.closest('.c'); boardEl.querySelectorAll('.aim').forEach(x=>x.classList.remove('aim')); if(!d) return; const i=+d.dataset.i; (S.aim==='chop'?[i,...nb(i)]:[i]).forEach(j=>boardEl.children[j].classList.add('aim')); });
+boardEl.addEventListener('pointerleave',()=>clearTimeout(lpT));
+$('flagMode').onclick=()=>{ S.flagMode=!S.flagMode; $('flagMode').classList.toggle('on',S.flagMode); };
+$('itSniff').onclick=()=>{ audio(); S.aim=S.aim==='sniff'?null:'sniff'; hud(); };
+$('itChop').onclick=()=>{ audio(); S.aim=S.aim==='chop'?null:'chop'; hud(); };
+$('restart').onclick=()=>{ audio(); newRun(R.mode==='buffet'?0:Math.max(0,R.meal), R.mode); };
+$('advBtn').onclick=()=>{ audio(); advance(true); };
+window.addEventListener('resize',fitCell);
+for(let k=0;k<14;k++){ const b=document.createElement('i'),s=6+Math.random()*18; b.style.cssText=`left:${Math.random()*100}%;width:${s}px;height:${s}px;animation-duration:${8+Math.random()*10}s;animation-delay:${-Math.random()*15}s`; $('bubbles').appendChild(b); }
+
+// debug hooks: verify by state
+window.G={ get R(){return R}, get S(){return S}, open, flag, chord, newRun, startMeal, endRun,
+  safe(){ return S.cells.findIndex(c=>!c.o&&!c.c&&!c.f); },
+  clearMeal(){ S.paused=false; if(!S.started){ open((S.w*S.h/2|0)+(S.w/2|0)); } let k; while((k=G.safe())>=0 && !S.over) open(k); } };
+newRun(qs.has('meal')?+qs.get('meal'):0, qs.get('mode')==='buffet'?'buffet':'run');
+})();
+</script>
+</body>
+</html>
