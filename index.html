@@ -125,6 +125,19 @@ button:disabled{opacity:.35;cursor:default}
 #peek{position:fixed;right:-14px;bottom:-34px;height:190px;z-index:2;pointer-events:none;transition:transform .4s}
 #peek.alert{transform:translateY(-30px) rotate(-6deg)}
 @media (max-width:760px){.fishbox{width:96px}.say{width:120px;font-size:12px;top:-40px}h1{font-size:20px}#peek{height:110px}.hunger{width:140px}.stage{gap:6px}}
+/* 竖屏手机：棋盘在上，底部大肥鱼 vs Claude 对峙 */
+@media (max-aspect-ratio:4/5){
+  #app{padding-top:14px}
+  .stage{flex-direction:column;align-items:center}
+  .fishbox{position:fixed;left:2vw;bottom:1vh;width:34vw;z-index:3}
+  .say{top:-36px;left:20vw;width:42vw;font-size:14px}
+  .weight{font-size:13px}
+  #peek{height:31vh;right:-3vw;bottom:-2vh}
+  .tip{display:none}
+  #advWrap{top:-10px}
+}
+#visits{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:4;font-size:12px;color:#1f2f57;opacity:.7;white-space:nowrap;pointer-events:none}
+#visits b{color:#d9573b}
 </style>
 </head>
 <body>
@@ -159,6 +172,8 @@ button:disabled{opacity:.35;cursor:default}
   </div>
   <div class="tip">左键开碗吃米 · 右键/长按贴封条 · 数字=周围几个 Claude · 点数字快速开 · 饥饿条见底会掉饭票 · 每顿饭后三选一道具</div>
 </div>
+<div id="visits"><span id="busuanzi_container_site_uv" style="display:none">🐳 已有 <b id="busuanzi_value_site_uv">-</b> 人来干过饭 · 总访问 <b id="busuanzi_value_site_pv">-</b> 次</span></div>
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <img id="peek" src="assets/claude_chibi.png" alt="">
 <div id="stamp"><div class="box"><div class="mark" id="stampText">禁止干饭</div><img src="assets/claude_chibi.png" alt=""></div></div>
 <div class="panel" id="panel"><div class="card" id="panelCard"></div></div>
@@ -273,8 +288,9 @@ function mealsBar(){
 }
 function banner(t,sub,boss){ const b=document.createElement('div'); b.className='banner'+(boss?' boss':''); b.innerHTML=`${t}<small>${sub}</small>`; document.body.appendChild(b); setTimeout(()=>b.remove(),1600); }
 function fitCell(){
-  const wide=window.innerWidth>760, maxW=Math.min(window.innerWidth-(wide?200:110),760), maxH=window.innerHeight-(wide?210:240);
-  const c=Math.floor(Math.min((maxW-20)/S.w,(maxH-20)/S.h,50))-3;
+  const W=window.innerWidth, H=window.innerHeight, portrait=H/W>1.25;
+  const wide=W>760, maxW=portrait?W*0.87:Math.min(W-(wide?200:110),760), maxH=portrait?H*0.66-150:H-(wide?210:240);
+  const c=Math.floor(Math.min((maxW-20)/S.w,(maxH-20)/S.h,portrait?64:50))-3;
   document.documentElement.style.setProperty('--cell',Math.max(20,c)+'px');
 }
 const nb=i=>{ const x=i%S.w,y=i/S.w|0,r=[]; for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ if(!dx&&!dy) continue; const X=x+dx,Y=y+dy; if(X>=0&&Y>=0&&X<S.w&&Y<S.h) r.push(Y*S.w+X);} return r; };
