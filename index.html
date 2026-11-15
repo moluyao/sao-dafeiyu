@@ -121,6 +121,14 @@ button:disabled{opacity:.35;cursor:default}
 .banner small{display:block;font-size:14px;font-weight:700;opacity:.8}
 .banner.boss{background:var(--red)}
 @keyframes banner{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.08);opacity:1}25%,80%{transform:translate(-50%,-50%) scale(1)}100%{opacity:0}}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.btns button{padding:9px 18px;font-size:15px}
+.btns button.pri{background:var(--navy);color:#fff}
+.btns button.buf{background:linear-gradient(90deg,#ffe08a,#ffb36b);color:#7a3b00}
+.prog{display:flex;gap:4px;justify-content:center;margin:8px 0 4px;flex-wrap:wrap}
+.prog span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:#eef2f7;color:#8a93a6}
+.prog span.done{background:#d8f3e3;color:#1f7a4a}.prog span.cur{background:var(--navy);color:#fff}.prog span.lost{background:#fde2dc;color:var(--red)}
+.hint2{font-size:12px;opacity:.6;margin-top:8px}
 .tip{font-size:12px;opacity:.75;text-align:center;max-width:600px}
 #peek{position:fixed;right:-14px;bottom:-34px;height:190px;z-index:2;pointer-events:none;transition:transform .4s}
 #peek.alert{transform:translateY(-30px) rotate(-6deg)}
@@ -390,11 +398,15 @@ function checkClear(){
   if(R.meal===MEALS.length-1){ setTimeout(()=>endRun(true),700); return; }
   setTimeout(()=>showPicks(bonus),700);
 }
+function progHtml(state){ // state: 'won' | 'lost'
+  return '<div class="prog">' + MEALS.map((M,i)=>`<span class="${i<R.meal||(i===R.meal&&state==='won')?'done':i===R.meal?(state==='lost'?'lost':'cur'):''}">${i<R.meal||(i===R.meal&&state==='won')?'✓ ':''}${M.name}${M.boss?' 👑':''}</span>`).join('') + '</div>';
+}
 function showPicks(bonus){
   const keys=Object.keys(CARDS).filter(k=>!(k==='ticket'&&R.maxLives>=5));
   const pool=[]; while(pool.length<3){ const k=keys[rng()*keys.length|0]; if(!pool.includes(k)) pool.push(k); }
   const M=MEALS[R.meal];
-  $('panelCard').innerHTML=`<img class="hero" src="assets/fish_full.png"><h2>${M.name}吃完了！</h2><p>这顿吃了 <b>${S.rice}</b> 碗 · 剩余饥饿值奖励 +${bonus}</p><p>选一个饭后道具：</p><div class="picks">${pool.map(k=>`<div class="pick" data-k="${k}"><div class="ic">${CARDS[k].ic}</div><b>${CARDS[k].name}</b><small>${CARDS[k].desc}</small></div>`).join('')}</div>`;
+  const N=MEALS[R.meal+1];
+  $('panelCard').innerHTML=`<img class="hero" src="assets/fish_full.png"><h2>🎉 恭喜您赢了！</h2><p>「${M.name}」吃完了 · 这顿吃了 <b>${S.rice}</b> 碗 · 饥饿值奖励 +${bonus}</p>${progHtml('won')}<p>下一关：<b>「${N.name}」</b>${N.boss?'（Boss 关）':''} · ${N.w}×${N.h} 棋盘 · ${N.claude} 个 Claude</p><p><b>👇 选一个饭后道具，进入下一关</b></p><div class="picks">${pool.map(k=>`<div class="pick" data-k="${k}"><div class="ic">${CARDS[k].ic}</div><b>${CARDS[k].name}</b><small>${CARDS[k].desc}</small></div>`).join('')}</div>`;
   $('panel').classList.add('show');
   document.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ audio(); const k=p.dataset.k; CARDS[k].apply(R); R.picked.push(k); SFX.item(); $('panel').classList.remove('show'); startMeal(R.meal+1); });
 }
@@ -406,8 +418,8 @@ function endRun(win){
     const secs=((performance.now()-R.t0)/1000)|0, best=+localStorage.getItem('sdfy_buffet_best')||0, bp=+localStorage.getItem('sdfy_buffet_plates')||0;
     if(R.score>best) localStorage.setItem('sdfy_buffet_best',R.score); if(S.plates>bp) localStorage.setItem('sdfy_buffet_plates',S.plates);
     const title=S.plates>=60?'自助餐厅老板哭了':S.plates>=40?'吃垮自助':S.plates>=20?'回本了':'还没回本';
-    $('panelCard').innerHTML=`<img class="hero" src="assets/fish_cry.png"><h2>自助结束 · ${title}</h2><p>转过 <b>${S.plates}</b> 盘 · 吃了 ${R.totalRice} 碗 · 浪费 ${S.waste} 碗 · 封印 ${S.sealedOut} 个 Claude</p><div class="big">${R.score}</div><p>坚持 ${secs}s · 最高分 ${Math.max(best,R.score)} · 最远 ${Math.max(bp,S.plates)} 盘</p><button id="again">再来一轮自助</button>`;
-    setTimeout(()=>{ $('panel').classList.add('show'); $('again').onclick=()=>{ audio(); newRun(0,'buffet'); }; },300);
+    $('panelCard').innerHTML=`<img class="hero" src="assets/fish_cry.png"><h2>自助结束 · ${title}</h2><p>转过 <b>${S.plates}</b> 盘 · 吃了 ${R.totalRice} 碗 · 浪费 ${S.waste} 碗 · 封印 ${S.sealedOut} 个 Claude</p><div class="big">${R.score}</div><p>坚持 ${secs}s · 最高分 ${Math.max(best,R.score)} · 最远 ${Math.max(bp,S.plates)} 盘</p><div class="btns"><button class="pri" id="again">🔄 再来一轮自助</button><button id="toRun">🍚 回到关卡模式</button></div>`;
+    setTimeout(()=>{ $('panel').classList.add('show'); $('again').onclick=()=>{ audio(); newRun(0,'buffet'); }; $('toRun').onclick=()=>{ audio(); newRun(0); }; },300);
     return;
   }
   if(win){ R.score+=R.lives*200; SFX.win(); } else { SFX.lose(); face('cry',0); }
@@ -416,9 +428,12 @@ function endRun(win){
   const grade=!win?'被盖章出局':R.lives>=4?'干饭之神':R.lives>=2?'干饭达人':'险些饿死';
   const picks=R.picked.map(k=>CARDS[k].ic).join(' ')||'无';
   $('panelCard').innerHTML = win
-    ? `<img class="hero" src="assets/fish_full.png"><h2>五顿全吃完了！</h2><p><b>${grade}</b> · 体重 ${(50+R.totalRice*0.08).toFixed(1)} 斤</p><div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 剩 ${R.lives} 张饭票 · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><button id="again">再吃一轮</button>`
-    : `<img class="hero" src="assets/fish_cry.png"><h2>饭票用光了</h2><p>倒在了「${MEALS[R.meal].name}」· Claude：今天的米没收了。</p><div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><button id="again">不服，再来</button>`;
-  setTimeout(()=>{ $('panel').classList.add('show'); $('again').onclick=()=>{ audio(); newRun(); }; }, win?600:300);
+    ? `<img class="hero" src="assets/fish_full.png"><h2>🏆 恭喜您通关了！</h2><p>五顿全吃完了</p>${progHtml('won')}<p><b>${grade}</b> · 体重 ${(50+R.totalRice*0.08).toFixed(1)} 斤</p><div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 剩 ${R.lives} 张饭票 · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><p><b>还没吃够？试试更难的「♾ 无限自助」：桌子一直在转，越转越快</b></p><div class="btns"><button class="buf" id="goBuffet">♾ 挑战无限自助</button><button id="again">🔄 再吃一轮</button></div>`
+    : `<img class="hero" src="assets/fish_cry.png"><h2>饭票用光了，这关没过</h2><p>倒在了「${MEALS[R.meal].name}」· Claude：今天的米没收了。</p>${progHtml('lost')}<div class="big">${R.score}</div><p>共吃 ${R.totalRice} 碗 · 用时 ${secs}s · 道具 ${picks}</p><p style="opacity:.6">最高分 ${Math.max(best,R.score)}</p><div class="btns"><button class="pri" id="retry">🔄 重新开始这一关</button>${R.meal<MEALS.length-1?`<button id="next">⏭ 进入下一关「${MEALS[R.meal+1].name}」</button>`:''}<button class="buf" id="goBuffet">♾ 无限自助</button></div><p class="hint2">也可以点顶部的「早饭 / 午饭 / …」直接选关</p>`;
+  const lv=R.meal, on=(id,f)=>{ const b=$(id); if(b) b.onclick=()=>{ audio(); f(); }; };
+  setTimeout(()=>{ $('panel').classList.add('show');
+    on('again',()=>newRun(0)); on('retry',()=>newRun(lv)); on('next',()=>newRun(lv+1)); on('goBuffet',()=>newRun(0,'buffet'));
+  }, win?600:300);
 }
 // ---------------- 无限自助（回转饭桌） ----------------
 function genRow(){ const d=buffetDensity(); return Array.from({length:S.w},()=>{ const c=rng()<d; return {c, g:!c&&rng()<.02, o:false, f:false, n:0, sealed:false}; }); }
