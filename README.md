@@ -6,6 +6,8 @@
 - **♾ 无限自助：** 回转饭桌一直在转，越转越快。没吃的米算浪费，看你能坚持几盘。
 - **操作：** 左键开碗，右键或长按贴封条。数字表示周围有几个 Claude。
 
-在线游玩：打开本仓库的 GitHub Pages 地址即可。
+## 🎮 在线游玩：https://moluyao.github.io/sao-dafeiyu/
+
+无限自助直达：https://moluyao.github.io/sao-dafeiyu/?mode=buffet
 
 > 同人娱乐作品，与 DeepSeek / Anthropic 官方无关。角色立绘为 AI 生成。
